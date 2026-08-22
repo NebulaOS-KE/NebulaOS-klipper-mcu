@@ -26,6 +26,7 @@ QUALIFIED.** No firmware built here has been flashed to a real printer. See
 | [`tests/`](tests/) | Offline config-parse regression fixtures run through Klipper's own `scripts/test_klippy.py` harness against this target's build dictionary. |
 | [`scripts/`](scripts/) | `fetch-upstream.sh`, `apply-patches.sh`, `build.sh`, `install-toolchain.sh`, `guard-no-vendored-source.sh`, and `ci.sh` (the canonical entrypoint — GitHub Actions is a thin wrapper around it). |
 | [`.github/workflows/build-mcu.yml`](.github/workflows/build-mcu.yml) | Runs `scripts/ci.sh` on push/PR/dispatch and uploads the resulting artifacts. Never flashes hardware. |
+| [`docs/REPRODUCIBILITY.md`](docs/REPRODUCIBILITY.md) | What's guaranteed reproducible, what isn't (and why - a host zlib-implementation difference, not this repo's patch queue), and which build's hashes are canonical. |
 
 This repository must **never** contain a vendored copy of Klipper's `klippy/`, `src/`, `lib/`, or
 `docs/` trees — `scripts/guard-no-vendored-source.sh` fails CI if it ever does. The upstream Klipper

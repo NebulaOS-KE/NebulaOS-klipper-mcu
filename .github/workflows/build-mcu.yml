@@ -13,10 +13,15 @@ jobs:
       - name: Check out NebulaOS-klipper-mcu
         uses: actions/checkout@v4
 
+      # Exact patch version, not a floating minor - see docs/REPRODUCIBILITY.md.
+      # scripts/buildcommands.py:zlib.compress()'s output length (embedded
+      # directly in the firmware as command_identify_data[]) depends on the
+      # host Python's bundled zlib build, so pinning the interpreter build
+      # is part of keeping this CI environment's own output stable over time.
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.12.14'
 
       - name: Install pinned Arm GNU Toolchain
         id: toolchain

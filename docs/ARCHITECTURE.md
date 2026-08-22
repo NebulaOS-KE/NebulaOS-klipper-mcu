@@ -69,6 +69,11 @@ the built Klipper tree), so its canonical artifact hashes differ from the origin
 hashes by design. See `_project/missions/2026-08-phase1.7-native-gd32-build.md` in the NebulaOS
 workspace for the exact before/after hash comparison and the full explanation.
 
+A second, independent source of cross-host hash variance was found while standing up GitHub Actions
+CI: the embedded command dictionary's compressed size depends on the host Python's zlib build. See
+[`docs/REPRODUCIBILITY.md`](REPRODUCIBILITY.md) for the full explanation and which build's hashes are
+canonical.
+
 ## Future channel model
 
 Documented, not yet built as automation:
