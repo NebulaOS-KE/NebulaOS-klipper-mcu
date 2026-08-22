@@ -106,8 +106,10 @@ python3 tools/test_creality_flash.py "$ARTIFACT_DIR/klipper-creality.bin" \
 
 echo
 echo "== Step 8: KE load_cell_probe config parse (offline, no hardware) =="
-python3 "$BUILD_DIR/scripts/test_klippy.py" -d "$BUILD_DIR/out" \
-    tests/klippy/nebulaos_ke_load_cell.test
+# test_klippy.py invokes ./klippy/klippy.py relative to the process cwd, so
+# it must be run from inside the patched Klipper checkout.
+( cd "$BUILD_DIR" && python3 scripts/test_klippy.py -d out \
+    "$REPO_ROOT/tests/klippy/nebulaos_ke_load_cell.test" )
 
 echo
 echo "== Step 9: provenance manifest =="

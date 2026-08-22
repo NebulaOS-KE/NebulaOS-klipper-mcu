@@ -14,7 +14,7 @@ cd "$(dirname "$0")/.."
 REPO_ROOT="$(pwd)"
 
 BUILD_DIR="${1:-build/klipper-src}"
-SERIES_FILE="patches/series"
+SERIES_FILE="$REPO_ROOT/patches/series"
 
 if [ ! -d "$BUILD_DIR/.git" ]; then
     echo "FAIL: $BUILD_DIR is not a git checkout - run scripts/fetch-upstream.sh first"
