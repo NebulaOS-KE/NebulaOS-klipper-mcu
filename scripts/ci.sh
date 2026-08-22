@@ -24,6 +24,14 @@ BUILD_DIR="build/klipper-src"
 UPSTREAM_SHA="58bd67db3ce1be1951c3e4a6d1156a79903d4edc"
 METADATA_VERSION="900"
 
+# tools/creality_validator.py shells out to arm-none-eabi-readelf directly
+# (not just build.sh's own make invocation), so the toolchain must be on
+# PATH for the whole script, not just re-exported inside build.sh's own
+# subprocess.
+if [ -n "${TOOLCHAIN_BIN:-}" ]; then
+    export PATH="$TOOLCHAIN_BIN:$PATH"
+fi
+
 rm -rf "$ARTIFACT_DIR"
 mkdir -p "$ARTIFACT_DIR"
 
