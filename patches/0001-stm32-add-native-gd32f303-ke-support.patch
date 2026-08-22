@@ -1,0 +1,278 @@
+From 01a9c2f925de8b8636caa0e61192ec6ff62ff9c9 Mon Sep 17 00:00:00 2001
+From: Tim <timdejaeger@gmail.com>
+Date: Sat, 22 Aug 2026 17:37:46 +0200
+Subject: [PATCH] src/stm32: add native GD32F303RET6 (Cortex-M4) target for
+ Creality KE
+
+Extends src/stm32/ following the existing N32G45x clone precedent
+(MACH_STM32F1 + Cortex-M4 CFLAGS + clock/flash/RAM Kconfig overrides)
+rather than adding a new src/gd32/ backend, since the GD32F303's GPIO,
+USART, ADC, SPI, I2C, timer and watchdog registers are STM32F103
+register-compatible.
+
+- src/stm32/Kconfig: MACH_GD32F303 chip choice (selects MACH_GD32F30x +
+  MACH_STM32F1), 120MHz/512KB/64KB clock+flash+RAM overrides, a new
+  12KiB "Creality" bootloader offset (STM32_FLASH_START_3000 -> app
+  origin 0x08003000), and auto-enabling STM32F103GD_DISABLE_SWD (the
+  existing GigaDevice SWD-disable-at-startup option) for this target
+  without needing LOW_LEVEL_OPTIONS.
+- src/stm32/Makefile: -mcpu=cortex-m4 for MACH_GD32F30x; builds the new
+  metadata placeholder object for this target only.
+- src/stm32/stm32f1.c: flash wait states 2->3 above 96MHz, scoped
+  strictly to MACH_GD32F30x so every other MACH_STM32F1 chip (including
+  N32G45x) keeps its prior hardcoded latency unchanged; a
+  bootloader_request() branch for the 12KiB offset that does a plain
+  NVIC_SystemReset() (the Creality bootloader auto-runs on every reset
+  and waits for a handshake - no backup-register magic is needed, per
+  serial_irq.c's existing recognition of the Creality magic string).
+- src/Kconfig: SERIAL_BAUD default 230400 for MACH_GD32F30x (the KE's
+  running Klipper application baud; distinct from the Creality
+  bootloader's own 115200).
+- src/stm32/gd32_creality_metadata.c (new) + src/generic/armcm_link.lds.S:
+  reserve exactly 16 bytes at app-relative offset 0x200 for the
+  Creality metadata header (type/version/CRC16/length) as a dedicated
+  kept linker section between the vector table and the rest of
+  .text/.rodata, so a post-link packer can fill in those 16 bytes
+  without shifting any other code or data. Verified against the real
+  ELF: .creality_metadata lands at exactly app+0x200, size 16, with
+  .text_app resuming at app+0x210 with no gap.
+
+Native build proof (arm-none-eabi-gcc 15.2.0, this commit):
+vector table at 0x08003000, initial SP 0x20010000 (top of 64KB SRAM),
+reset vector 0x08009a65 -> ResetHandler (both within valid ranges),
+hx71x/trigger_analog/sos_filter all compiled in automatically (default
+y once WANT_HX71X's HAVE_GPIO dependency is met and the part isn't
+code-size-limited), raw klipper.bin 40064 bytes (well under the
+Creality 65535-byte packaged-image ceiling).
+
+Not yet flashed to hardware - offline build/link proof only.
+---
+ src/Kconfig                        |  1 +
+ src/generic/armcm_link.lds.S       | 30 ++++++++++++++++++++++++++++++
+ src/stm32/Kconfig                  | 16 +++++++++++++++-
+ src/stm32/Makefile                 |  2 ++
+ src/stm32/gd32_creality_metadata.c | 18 ++++++++++++++++++
+ src/stm32/stm32f1.c                | 15 +++++++++++++--
+ 6 files changed, 79 insertions(+), 3 deletions(-)
+ create mode 100644 src/stm32/gd32_creality_metadata.c
+
+diff --git a/src/Kconfig b/src/Kconfig
+index 66b0c475d..7a0641d45 100644
+--- a/src/Kconfig
++++ b/src/Kconfig
+@@ -52,6 +52,7 @@ config SERIAL
+ config SERIAL_BAUD
+     depends on SERIAL
+     int "Baud rate for serial port" if LOW_LEVEL_OPTIONS
++    default 230400 if MACH_GD32F30x
+     default 250000
+     help
+         Specify the baud rate of the serial port. This should be set
+diff --git a/src/generic/armcm_link.lds.S b/src/generic/armcm_link.lds.S
+index 94dd2100d..9a02abf8f 100644
+--- a/src/generic/armcm_link.lds.S
++++ b/src/generic/armcm_link.lds.S
+@@ -22,10 +22,40 @@ SECTIONS
+         _text_vectortable_start = .;
+         KEEP(*(.vector_table))
+         _text_vectortable_end = .;
++#if !CONFIG_MACH_GD32F30x
+         *(.text .text.*)
+         *(.rodata .rodata*)
++#endif
+     } > rom
+ 
++#if CONFIG_MACH_GD32F30x
++    // The Creality bootloader on the KE's GD32F303RET6 reads a 16-byte
++    // metadata header (type/version/CRC16/length) from application-image
++    // offset 0x200. Reserve that exact window here, between the vector
++    // table and the rest of .text/.rodata, so the post-link NebulaOS
++    // packer can fill it in without shifting any other code or data.
++    ASSERT(_text_vectortable_end <= CONFIG_FLASH_APPLICATION_ADDRESS + 0x200,
++           "GD32F303 vector table overruns the reserved Creality metadata window at app+0x200")
++
++    // An explicit output-section address is required here: a bare
++    // ". = expr" location-counter assignment between two MEMORY-region
++    // ("> rom") output sections does not by itself move where the next
++    // such section is placed (verified against GNU ld directly) - only
++    // an address on the section itself does.
++    .creality_metadata CONFIG_FLASH_APPLICATION_ADDRESS + 0x200 : {
++        _creality_metadata_start = .;
++        KEEP(*(.creality_metadata))
++        _creality_metadata_end = .;
++    } > rom
++    ASSERT(_creality_metadata_end == CONFIG_FLASH_APPLICATION_ADDRESS + 0x210,
++           "Creality metadata section must be exactly 16 bytes")
++
++    .text_app : {
++        *(.text .text.*)
++        *(.rodata .rodata*)
++    } > rom
++#endif
++
+     . = ALIGN(4);
+     _data_flash = .;
+ 
+diff --git a/src/stm32/Kconfig b/src/stm32/Kconfig
+index da1b47442..b0cf40b65 100644
+--- a/src/stm32/Kconfig
++++ b/src/stm32/Kconfig
+@@ -111,6 +111,10 @@ choice
+         bool "Nation N32G455"
+         select MACH_N32G45x
+         select MACH_STM32F1
++    config MACH_GD32F303
++        bool "GigaDevice GD32F303"
++        select MACH_GD32F30x
++        select MACH_STM32F1
+ endchoice
+ 
+ config MACH_STM32F103x6
+@@ -149,6 +153,8 @@ config MACH_STM32L4
+     bool
+ config MACH_N32G45x
+     bool
++config MACH_GD32F30x
++    bool
+ config HAVE_STM32_USBFS
+     bool
+     default y if MACH_STM32F0x2 || MACH_STM32G0Bx || MACH_STM32L4 || MACH_STM32G4
+@@ -197,6 +203,7 @@ config MCU
+     default "stm32h750xx" if MACH_STM32H750
+     default "stm32l412xx" if MACH_STM32L412
+     default "stm32f103xe" if MACH_N32G45x
++    default "stm32f103xe" if MACH_GD32F30x
+ 
+ config CLOCK_FREQ
+     int
+@@ -217,6 +224,7 @@ config CLOCK_FREQ
+     default 80000000 if MACH_STM32L412
+     default 64000000 if MACH_N32G45x && STM32_CLOCK_REF_INTERNAL
+     default 128000000 if MACH_N32G45x
++    default 120000000 if MACH_GD32F30x
+ 
+ config FLASH_SIZE
+     hex
+@@ -230,6 +238,7 @@ config FLASH_SIZE
+     default 0x20000 if MACH_STM32H750
+     default 0x200000 if MACH_STM32H743 || MACH_STM32F765
+     default 0x20000 if MACH_N32G45x
++    default 0x80000 if MACH_GD32F30x
+ 
+ config FLASH_BOOT_ADDRESS
+     hex
+@@ -258,6 +267,7 @@ config RAM_SIZE
+     default 0x24000 if MACH_STM32G0Bx
+     default 0x20000 if MACH_STM32H7
+     default 0x10000 if MACH_N32G45x
++    default 0x10000 if MACH_GD32F30x
+ 
+ config STACK_SIZE
+     int
+@@ -265,7 +275,8 @@ config STACK_SIZE
+ 
+ config STM32F103GD_DISABLE_SWD
+     bool "Disable SWD at startup (for GigaDevice stm32f103 clones)"
+-    depends on MACH_STM32F103 && LOW_LEVEL_OPTIONS
++    depends on (MACH_STM32F103 && LOW_LEVEL_OPTIONS) || MACH_GD32F30x
++    default y if MACH_GD32F30x
+     default n
+     help
+         The GigaDevice clone of the STM32F103 may not be able to
+@@ -307,6 +318,8 @@ choice
+         bool "48KiB bootloader" if MACH_STM32F4x5 || MACH_STM32F401
+     config STM32_FLASH_START_10000
+         bool "64KiB bootloader" if MACH_STM32F103 || MACH_STM32F4 || MACH_N32G45x
++    config STM32_FLASH_START_3000
++        bool "12KiB bootloader (Creality serial bootloader)" if MACH_GD32F30x
+ 
+     config STM32_FLASH_START_800
+         bool "2KiB bootloader" if MACH_STM32F103
+@@ -325,6 +338,7 @@ config FLASH_APPLICATION_ADDRESS
+     default 0x8000800 if STM32_FLASH_START_800
+     default 0x8001000 if STM32_FLASH_START_1000
+     default 0x8002000 if STM32_FLASH_START_2000
++    default 0x8003000 if STM32_FLASH_START_3000
+     default 0x8004000 if STM32_FLASH_START_4000
+     default 0x8005000 if STM32_FLASH_START_5000
+     default 0x8007000 if STM32_FLASH_START_7000
+diff --git a/src/stm32/Makefile b/src/stm32/Makefile
+index 3c158d518..37f14120c 100644
+--- a/src/stm32/Makefile
++++ b/src/stm32/Makefile
+@@ -22,6 +22,7 @@ CFLAGS-$(CONFIG_HAVE_LIMITED_CODE_SIZE) += -Os
+ CFLAGS-$(CONFIG_MACH_STM32F0) += -mcpu=cortex-m0 -Ilib/stm32f0/include
+ CFLAGS-$(CONFIG_MACH_STM32F103) += -mcpu=cortex-m3
+ CFLAGS-$(CONFIG_MACH_N32G45x) += -mcpu=cortex-m4 -Ilib/n32g45x/include
++CFLAGS-$(CONFIG_MACH_GD32F30x) += -mcpu=cortex-m4
+ CFLAGS-$(CONFIG_MACH_STM32F1) += -Ilib/stm32f1/include
+ CFLAGS-$(CONFIG_MACH_STM32F2) += -mcpu=cortex-m3 -Ilib/stm32f2/include
+ CFLAGS-$(CONFIG_MACH_STM32F4) += -mcpu=cortex-m4 -Ilib/stm32f4/include
+@@ -39,6 +40,7 @@ $(OUT)klipper.elf: $(OUT)src/generic/armcm_link.ld
+ # Add source files
+ src-y += stm32/watchdog.c stm32/clockline.c stm32/dfu_reboot.c
+ src-y += generic/crc16_ccitt.c
++src-$(CONFIG_MACH_GD32F30x) += stm32/gd32_creality_metadata.c
+ src-y += generic/armcm_boot.c generic/armcm_irq.c generic/armcm_reset.c
+ src-$(CONFIG_MACH_STM32F0) += stm32/stm32f0.c ../lib/stm32f0/system_stm32f0xx.c
+ src-$(CONFIG_MACH_STM32F1) += stm32/stm32f1.c ../lib/stm32f1/system_stm32f1xx.c
+diff --git a/src/stm32/gd32_creality_metadata.c b/src/stm32/gd32_creality_metadata.c
+new file mode 100644
+index 000000000..593d43593
+--- /dev/null
++++ b/src/stm32/gd32_creality_metadata.c
+@@ -0,0 +1,18 @@
++// Reserved placeholder for the Creality serial-bootloader metadata header
++//
++// This file may be distributed under the terms of the GNU GPLv3 license.
++
++#include <stdint.h>
++
++// The Creality bootloader on the Ender-3 V3 KE's GD32F303RET6 expects a
++// 16-byte header (type/version/reserved/CRC16/length) at application-image
++// offset 0x200. That window is reserved here as a dedicated, kept linker
++// section (see src/generic/armcm_link.lds.S) so the post-link NebulaOS
++// packer can overwrite exactly these 16 bytes without shifting any other
++// code or data in the image. The placeholder value is arbitrary - it is
++// always fully overwritten before the image is considered flashable.
++const uint8_t gd32_creality_metadata_placeholder[16]
++    __attribute__((section(".creality_metadata"), used)) = {
++    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
++    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
++};
+diff --git a/src/stm32/stm32f1.c b/src/stm32/stm32f1.c
+index 94cfe1390..37553464f 100644
+--- a/src/stm32/stm32f1.c
++++ b/src/stm32/stm32f1.c
+@@ -79,8 +79,15 @@ clock_setup(void)
+     RCC->CFGR = cfgr;
+     RCC->CR |= RCC_CR_PLLON;
+ 
+-    // Set flash latency
+-    FLASH->ACR = (2 << FLASH_ACR_LATENCY_Pos) | FLASH_ACR_PRFTBE;
++    // Set flash latency. Scoped strictly to MACH_GD32F30x so every other
++    // existing MACH_STM32F1 chip (including N32G45x) keeps the prior
++    // hardcoded latency of 2 unchanged; GD32F303 at 120Mhz needs 3.
++#if CONFIG_MACH_GD32F30x
++    uint32_t flash_latency = CONFIG_CLOCK_FREQ > 96000000 ? 3 : 2;
++#else
++    uint32_t flash_latency = 2;
++#endif
++    FLASH->ACR = (flash_latency << FLASH_ACR_LATENCY_Pos) | FLASH_ACR_PRFTBE;
+ 
+     // Wait for PLL lock
+     while (!(RCC->CR & RCC_CR_PLLRDY))
+@@ -251,6 +258,10 @@ bootloader_request(void)
+         usb_hid_bootloader();
+     else if (CONFIG_STM32_FLASH_START_2000)
+         usb_stm32duino_bootloader();
++    else if (CONFIG_STM32_FLASH_START_3000)
++        // Creality's 12KiB serial bootloader auto-runs on every reset
++        // and waits for a handshake - no backup-register magic needed.
++        NVIC_SystemReset();
+ }
+ 
+ 
+-- 
+2.55.0
+

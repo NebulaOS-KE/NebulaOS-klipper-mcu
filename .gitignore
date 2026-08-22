@@ -1,0 +1,5 @@
+# Disposable build input/output - never committed. See scripts/fetch-upstream.sh.
+/build/
+/artifacts/
+__pycache__/
+*.pyc

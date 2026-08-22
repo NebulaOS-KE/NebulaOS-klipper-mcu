@@ -1,0 +1,49 @@
+name: build-mcu
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out NebulaOS-klipper-mcu
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pinned Arm GNU Toolchain
+        id: toolchain
+        run: |
+          TOOLCHAIN_BIN=$(./scripts/install-toolchain.sh "$RUNNER_TEMP/arm-gnu-toolchain")
+          echo "bin=$TOOLCHAIN_BIN" >> "$GITHUB_OUTPUT"
+
+      - name: Configure git identity for patch reconstruction
+        run: |
+          git config --global user.name "NebulaOS CI"
+          git config --global user.email "ci@nebulaos.invalid"
+
+      - name: Run canonical CI entrypoint
+        env:
+          TOOLCHAIN_BIN: ${{ steps.toolchain.outputs.bin }}
+        run: ./scripts/ci.sh artifacts
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nebulaos-klipper-mcu-ke-${{ github.sha }}
+          path: |
+            artifacts/klipper.elf
+            artifacts/klipper.bin
+            artifacts/klipper-creality.bin
+            artifacts/klipper.config
+            artifacts/provenance.json
+            artifacts/validator-report.txt
+            artifacts/reconstructed-source.diff
+          if-no-files-found: error

@@ -1,0 +1,32 @@
+{
+  "mcu": {
+    "platform": "gd32f303ret6",
+    "arch": "cortex-m4",
+    "clock_hz": 120000000,
+    "flash_bytes": 524288,
+    "ram_bytes": 65536,
+    "bootloader_reserved_bytes": 12288,
+    "application_origin": "0x08003000",
+    "usart": "USART2",
+    "tx_pin": "PA2",
+    "rx_pin": "PA3",
+    "application_baud": 230400,
+    "creality_bootloader_baud": 115200,
+    "upstream_klipper_repo": "https://github.com/Klipper3d/klipper.git",
+    "upstream_klipper_sha": "58bd67db3ce1be1951c3e4a6d1156a79903d4edc",
+    "patch_series": "patches/series"
+  },
+  "host": {
+    "required_klipper_feature_set": [
+      "load_cell_probe",
+      "trigger_analog",
+      "hx71x"
+    ],
+    "host_core_patches_required": false,
+    "note": "For first hardware parity, the recommended host is an official upstream Klipper revision that contains the matching load_cell_probe/trigger_analog/hx71x stack. The Nebula Pad host does NOT need to run this patched MCU checkout - the host Klipper source and the MCU firmware source are independently pinned upstream checkouts."
+  },
+  "status": {
+    "offline_validated": true,
+    "hardware_qualified": false
+  }
+}

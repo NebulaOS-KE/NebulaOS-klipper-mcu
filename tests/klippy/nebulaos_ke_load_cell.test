@@ -1,0 +1,9 @@
+# Offline config-parse proof: NebulaOS Phase 1.7 KE target against this
+# repo's own real GD32F303 build dictionary.
+DICTIONARY klipper.dict
+CONFIG nebulaos_ke_load_cell.cfg
+
+# No motion - this only needs to prove [mcu]/[load_cell_probe] parse and
+# instantiate cleanly (including the HX711 sensor, trigger_analog dispatch,
+# and NumPy import) against the exact pinned upstream Klipper revision.
+STATUS
