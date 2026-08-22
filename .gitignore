@@ -3,3 +3,8 @@
 /artifacts/
 __pycache__/
 *.pyc
+
+# scripts/test_klippy.py scratch output (klippy's own regression harness)
+/_test_.gcode
+/_test_.log
+/_test_output*
