@@ -6,7 +6,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-FORBIDDEN_PATHS=(klippy src lib docs)
+FORBIDDEN_PATHS=(klippy src lib)
 FAIL=0
 
 for p in "${FORBIDDEN_PATHS[@]}"; do
@@ -16,11 +16,16 @@ for p in "${FORBIDDEN_PATHS[@]}"; do
     fi
 done
 
-# The repo's own scripts/ is expected and allowed; only flag it if it looks
-# like a wholesale copy of Klipper's own top-level scripts/ (e.g. contains
-# buildcommands.py, which this repo never should).
+# This repo's own docs/ and scripts/ directories are expected and allowed
+# (small, NebulaOS-authored). Only flag them if they look like a wholesale
+# copy of Klipper's own same-named trees, via canary files unique to
+# upstream Klipper that this repo should never contain.
 if git ls-files --error-unmatch scripts/buildcommands.py >/dev/null 2>&1; then
     echo "FAIL: scripts/buildcommands.py is tracked - looks like a vendored Klipper scripts/ tree"
+    FAIL=1
+fi
+if git ls-files --error-unmatch docs/Config_Reference.md >/dev/null 2>&1; then
+    echo "FAIL: docs/Config_Reference.md is tracked - looks like a vendored Klipper docs/ tree"
     FAIL=1
 fi
 
