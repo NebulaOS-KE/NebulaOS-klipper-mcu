@@ -114,12 +114,16 @@ python3 tools/test_creality_flash.py "$ARTIFACT_DIR/klipper-creality.bin" \
 
 echo
 echo "== Step 8: KE load_cell_probe config parse (offline, no hardware) =="
-# Klippy's own host-side dependencies (greenlet, cffi, etc.) - pinned by
-# upstream Klipper itself, not this repo - are required to run
-# scripts/test_klippy.py. Only installed if missing so a host that already
-# has them (e.g. NumPy/SciPy from a system install) doesn't get disturbed.
+# Klippy's own host-side dependencies (greenlet, cffi, etc. - pinned by
+# upstream Klipper itself, not this repo) are required to run
+# scripts/test_klippy.py. NumPy is klippy/extras/load_cell_probe.py's own
+# unconditional hard dependency (Phase 1.7 mission finding, not pinned by
+# Klipper's own requirements file since it's an optional extra there).
+# Only installed if missing so a host that already has them doesn't get
+# disturbed.
 python3 -c "import greenlet" 2>/dev/null || \
     pip install --quiet -r "$BUILD_DIR/scripts/klippy-requirements.txt"
+python3 -c "import numpy" 2>/dev/null || pip install --quiet numpy
 # test_klippy.py invokes ./klippy/klippy.py relative to the process cwd, so
 # it must be run from inside the patched Klipper checkout.
 ( cd "$BUILD_DIR" && python3 scripts/test_klippy.py -d out \
