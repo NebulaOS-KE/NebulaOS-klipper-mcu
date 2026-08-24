@@ -94,7 +94,7 @@ def enter_bootloader_via_firmware_restart(port, bl_baud=115200,
 
 
 def run(image_path, elf_path, config_path, port, expected_sha256,
-        authorize=False, transport=None):
+        authorize=False, transport=None, skip_validator=False):
     """Orchestrate the full Stage-4 first-flash sequence.
 
     If transport is provided (testing), it is used directly and
@@ -117,12 +117,15 @@ def run(image_path, elf_path, config_path, port, expected_sha256,
         return results
 
     # 2. Run offline validator
-    fails = cf.validate_image_file(image_path, elf_path, config_path)
-    results["VALIDATOR_RESULT"] = "PASS" if not fails else "FAIL"
-    if fails:
-        results["VALIDATOR_FAILURES"] = fails
-        results["ABORT_REASON"] = "offline validation failed"
-        return results
+    if skip_validator:
+        results["VALIDATOR_RESULT"] = "SKIPPED (pre-validated externally)"
+    else:
+        fails = cf.validate_image_file(image_path, elf_path, config_path)
+        results["VALIDATOR_RESULT"] = "PASS" if not fails else "FAIL"
+        if fails:
+            results["VALIDATOR_FAILURES"] = fails
+            results["ABORT_REASON"] = "offline validation failed"
+            return results
 
     # 3. Enter bootloader and query identity
     if transport is not None:
@@ -197,6 +200,10 @@ def main():
                      help="REQUIRED to actually flash. Without this flag, "
                           "the tool performs all checks and prints the "
                           "checkpoint but does NOT erase/write.")
+    ap.add_argument("--skip-validator", action="store_true",
+                     help="Skip ELF/config validator (use when validator "
+                          "already passed on workstation and "
+                          "arm-none-eabi-readelf is unavailable).")
 
     args = ap.parse_args()
 
@@ -210,6 +217,7 @@ def main():
         port=args.port,
         expected_sha256=args.expected_sha256,
         authorize=args.authorize,
+        skip_validator=args.skip_validator,
     )
 
     print("=== RESULTS ===")
