@@ -14,9 +14,9 @@ HOST_KLIPPER_FORK = NO
 ```
 
 An ordinary, unmodified `Klipper3d/klipper` checkout at a pinned commit, with NebulaOS's own Klippy
-extras (PRTouch, Z-compensation, TMC status, etc., in `NebulaOS-klipper-extensions`) composed
-alongside it at boot — never patched into Klipper's own core files. Host patches are **forbidden** by
-current architecture.
+extras (Z-compensation, nozzle-contact/Z-offset calibration, power-loss recovery, TMC status, etc.,
+in `NebulaOS-klipper-extensions`) composed alongside it at boot — never patched into Klipper's own
+core files. Host patches are **forbidden** by current architecture.
 
 **MCU (this repository, `NebulaOS-klipper-mcu`):**
 
