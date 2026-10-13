@@ -14,6 +14,17 @@ QUALIFIED.** No firmware built here has been flashed to a real printer. See
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and the NebulaOS workspace's
 `_project/missions/2026-08-phase1.7-native-gd32-build.md` for the full closure report.
 
+## Building your own firmware: read this first
+
+> **Firmware for the KE must carry Creality's 16-byte header at offset 0x200.** The board keeps
+> Creality's bootloader, and it refuses any image without that header. Upstream Klipper (and forks
+> without this repository's patch) has program code at 0x200, so it **cannot** be made to fit.
+> Build from this repository: its patch reserves the 16 bytes, and NebulaOS fills them in when you
+> install a plain `out/klipper.bin` from the touchscreen (**Settings → Printer → MCU firmware**).
+>
+> Details, the settings you must keep, and what NebulaOS checks before installing:
+> [`docs/BUILDING_YOUR_OWN_FIRMWARE.md`](docs/BUILDING_YOUR_OWN_FIRMWARE.md).
+
 ## How this repository is structured
 
 | Path | Purpose |
@@ -26,6 +37,7 @@ QUALIFIED.** No firmware built here has been flashed to a real printer. See
 | [`tests/`](tests/) | Offline config-parse regression fixtures run through Klipper's own `scripts/test_klippy.py` harness against this target's build dictionary. |
 | [`scripts/`](scripts/) | `fetch-upstream.sh`, `apply-patches.sh`, `build.sh`, `install-toolchain.sh`, `guard-no-vendored-source.sh`, and `ci.sh` (the canonical entrypoint — GitHub Actions is a thin wrapper around it). |
 | [`.github/workflows/build-mcu.yml`](.github/workflows/build-mcu.yml) | Runs `scripts/ci.sh` on push/PR/dispatch and uploads the resulting artifacts. Never flashes hardware. |
+| [`docs/BUILDING_YOUR_OWN_FIRMWARE.md`](docs/BUILDING_YOUR_OWN_FIRMWARE.md) | The 0x200 header requirement, the settings to keep, and what NebulaOS accepts when you install your own build from the touchscreen. |
 | [`docs/REPRODUCIBILITY.md`](docs/REPRODUCIBILITY.md) | What's guaranteed reproducible, what isn't (and why - a host zlib-implementation difference, not this repo's patch queue), and which build's hashes are canonical. |
 
 This repository must **never** contain a vendored copy of Klipper's `klippy/`, `src/`, `lib/`, or
