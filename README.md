@@ -1,5 +1,7 @@
 # NebulaOS-klipper-mcu
 
+> Part of [NebulaOS](https://github.com/NebulaOS-KE/NebulaOS): open firmware for the Creality Ender-3 V3 KE. The project map, releases and downloads are there.
+
 `NebulaOS-klipper-mcu` does not fork or vendor Klipper.
 
 It builds Ender-3 V3 KE (Creality Nebula Pad, GD32F303RET6) MCU firmware from a pinned official
