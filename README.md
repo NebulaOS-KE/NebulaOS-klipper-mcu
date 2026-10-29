@@ -48,7 +48,7 @@ build; it is never committed here.
 ## Build
 
 ```sh
-git clone https://github.com/coreflake1/NebulaOS-klipper-mcu.git
+git clone https://github.com/NebulaOS-KE/NebulaOS-klipper-mcu.git
 cd NebulaOS-klipper-mcu
 ./scripts/ci.sh
 ```
