@@ -27,6 +27,14 @@ QUALIFIED.** No firmware built here has been flashed to a real printer. See
 > Details, the settings you must keep, and what NebulaOS checks before installing:
 > [`docs/BUILDING_YOUR_OWN_FIRMWARE.md`](docs/BUILDING_YOUR_OWN_FIRMWARE.md).
 
+## What happens to the firmware on a printer
+
+[MCU firmware lifecycle](docs/MCU_FIRMWARE_LIFECYCLE.md) covers how NebulaOS identifies what the
+board is running, when it reinstalls the native build automatically, why a firmware you installed
+yourself is never overwritten, and how a user installs their own. Short version: both systems
+restore their own MCU firmware at boot, so switching between NebulaOS and Creality's system is
+self-correcting in both directions.
+
 ## How this repository is structured
 
 | Path | Purpose |
