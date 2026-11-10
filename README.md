@@ -11,10 +11,20 @@ official upstream checkout with **zero host-core patches** — see
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for why the host and MCU source policies are
 deliberately different.
 
-**Status: the MCU artifact this repository builds is OFFLINE VALIDATED, but NOT yet HARDWARE
-QUALIFIED.** No firmware built here has been flashed to a real printer. See
-[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and the NebulaOS workspace's
+**Status: the MCU artifact this repository builds is OFFLINE VALIDATED, and this repository
+claims no HARDWARE QUALIFICATION for it** - `compatibility.json` records
+`"hardware_qualified": false`, and that assessment is the project owner's to make, not a
+document's. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and the NebulaOS workspace's
 `_project/missions/2026-08-phase1.7-native-gd32-build.md` for the full closure report.
+
+Read that as *no qualification claim*, not as *never run*. What has happened on real hardware is
+recorded in `NebulaOS-firmware`, not here: the build from this repository's patch queue
+(candidate-001, `mcu_repo_commit` `3aefd28`, patch commit `01a9c2f9`) is the MCU firmware a
+NebulaOS printer runs; it was flashed and queried live during its 2026-08-28 qualification run,
+which found three real bugs no mocked test could have caught; and the boot-time path that
+reinstalls it was exercised again on the development printer on 2026-11-05. The record is in that
+repository's `docs/MCU_LIFECYCLE_GUARD.md`, `mcu_restore.py` and `S50nebulaos-mcu-guard`, and
+[`docs/MCU_FIRMWARE_LIFECYCLE.md`](docs/MCU_FIRMWARE_LIFECYCLE.md) here explains the mechanism.
 
 ## Building your own firmware: read this first
 
@@ -81,7 +91,16 @@ toolchain CI uses).
 **No hardware flashing happens in this repository or its CI.** `tools/creality_flash.py` implements
 the future flasher, but its `flash()` path is safe-by-default: it refuses to proceed unless the image
 independently passes the validator *and* the live bootloader's reported hardware identity matches an
-explicit allow-list (default: exactly `mcu0_001_G32`). It has only ever been exercised against a fake
-in-memory transport in `tools/test_creality_flash.py`. The first real-hardware operation this project
-authorizes is a **read-only** bootloader identity query — see the NebulaOS workspace's Phase 1.8
-mission plan.
+explicit allow-list (default: exactly `mcu0_001_G32`). **This copy** has only ever been exercised
+against a fake in-memory transport in `tools/test_creality_flash.py`, and no NebulaOS automation
+runs it: a printer runs the copy deployed by `NebulaOS-firmware` at `/opt/nebulaos/tools/`.
+
+**Those two copies have diverged, and this one is the older.** The deployed copy was taken
+verbatim from `tools/` at commit `c793e77` (its `provenance.json` sidecar records the hash this
+file still has), and has since gained two fixes that only real hardware could surface: opening
+the port with DTR and RTS held low, the way pyserial 3.5 actually supports — the keyword-argument
+form raises `ValueError`, so the guard could not open the port at all on ke-dev on 2026-10-03 —
+and a `close()` on the transport, without which the post-flash identify refused a port the
+flasher itself was still holding and every successful restore was reported as a failure
+(ke-dev, 2026-11-05). Neither fix is in this file. Do not use `tools/creality_flash.py` against
+a printer expecting the deployed behaviour; read `NebulaOS-firmware`'s copy as the live one.
