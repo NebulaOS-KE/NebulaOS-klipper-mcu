@@ -1,5 +1,5 @@
 From 01a9c2f925de8b8636caa0e61192ec6ff62ff9c9 Mon Sep 17 00:00:00 2001
-From: Tim <timdejaeger@gmail.com>
+From: NebulaOS <33003628+coreflake1@users.noreply.github.com>
 Date: Sat, 22 Aug 2026 17:37:46 +0200
 Subject: [PATCH] src/stm32: add native GD32F303RET6 (Cortex-M4) target for
  Creality KE
