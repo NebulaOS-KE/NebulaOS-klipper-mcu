@@ -2,9 +2,12 @@
 
 You can build your own Klipper firmware for the KE's mainboard (GD32F303RET6) and install it from
 the NebulaOS touchscreen (**Settings → Printer → MCU firmware**): put the `.bin` on a USB stick, or
-upload it in Mainsail to `config/firmware/mcu`.
+upload it in Mainsail to **Machine → config → uploads → mainboard-firmware**.
 
 **There is one hard requirement. Read this before you build.**
+
+Written against `NebulaOS-klipper-mcu` `6648b97` and `NebulaOS-firmware` `b95b156`; the checks
+described here are the same in the 1.0.2 release (firmware `3bdf3ff`).
 
 ## The requirement: the Creality header at offset 0x200
 
@@ -49,6 +52,14 @@ So a plain `make` in a tree built by this repository gives an image with an empt
 | `out/klipper.bin` from a tree built by this repository | the **raw** build, header slot still `0xFF` | fills in the header itself (`mcu0`, version `900`, CRC, length) and installs it. You never need the packer |
 | `klipper-creality.bin` from `scripts/ci.sh` / `tools/creality_packer.py` | the **packed** image, header filled in | checks the header and installs it |
 | anything else | upstream Klipper, other forks without the reservation, another board's firmware | refused, with the reason on screen |
+
+**This page, and that installer, are about the KE's mainboard only.** A firmware for any other
+board is refused here, and must be flashed the way that board is normally flashed - almost always
+an SD card. For a Nebula Pad driving a different Creality printer, the wiki collects what other
+people have got working, settings and all, in
+[Other printers (experimental, untested)](https://github.com/NebulaOS-KE/NebulaOS/wiki/Other-Printers-Experimental).
+None of it has been tested here, and the KE's settings in this page - the 12 KiB bootloader
+offset, USART2, and the header above - are **not** the settings those boards need.
 
 Before anything touches the board, NebulaOS also checks:
 - the size: at most **65535 bytes**, because the header's length field is 16 bits;
