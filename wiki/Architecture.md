@@ -71,7 +71,7 @@ workspace for the exact before/after hash comparison and the full explanation.
 
 A second, independent source of cross-host hash variance was found while standing up GitHub Actions
 CI: the embedded command dictionary's compressed size depends on the host Python's zlib build. See
-[`docs/REPRODUCIBILITY.md`](REPRODUCIBILITY.md) for the full explanation and which build's hashes are
+[Reproducibility](Reproducibility) for the full explanation and which build's hashes are
 canonical.
 
 ## Future channel model

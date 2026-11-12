@@ -204,10 +204,10 @@ ask the project owner rather than infer it from this field.
 
 ## Related
 
-- [Building your own firmware](BUILDING_YOUR_OWN_FIRMWARE.md) - the Creality header at offset
+- [Building your own firmware](Building-Your-Own-Firmware) - the Creality header at offset
   `0x200`, what NebulaOS accepts, and what is not supported
-- [Architecture](ARCHITECTURE.md) - why a patch queue rather than a fork
-- [Reproducibility](REPRODUCIBILITY.md) - why artifact hashes can legitimately differ
+- [Architecture](Architecture) - why a patch queue rather than a fork
+- [Reproducibility](Reproducibility) - why artifact hashes can legitimately differ
 - `NebulaOS-firmware`'s `docs/reference/ARCHITECTURE.md` - boot, slots and recovery
 - The wiki's [Other printers (experimental, untested)](https://github.com/NebulaOS-KE/NebulaOS/wiki/Other-Printers-Experimental)
   - community mainboard builds for other Nebula Pad printers, none of them tested here
