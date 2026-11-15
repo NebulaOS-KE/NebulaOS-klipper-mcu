@@ -1,0 +1,12 @@
+# Ender-3 V3 SE mainboard, chip STM32F401 (some C14 boards).
+# Same settings as SimpleAF's Nebula Pad C14 firmware (pellcorp/kalico aug2026
+# .config.e3v3se-c14; confirmed on a C14 with a Nebula Pad, pellcorp/creality#1702).
+# 64 KiB bootloader, 8 MHz crystal, serial to the Nebula Pad on USART2, 230400.
+# expect: CONFIG_FLASH_APPLICATION_ADDRESS=0x8010000 CONFIG_MCU="stm32f401xc" CONFIG_SERIAL_BAUD=230400
+CONFIG_LOW_LEVEL_OPTIONS=y
+CONFIG_MACH_STM32=y
+CONFIG_MACH_STM32F401=y
+CONFIG_STM32_FLASH_START_10000=y
+CONFIG_STM32_CLOCK_REF_8M=y
+CONFIG_STM32_SERIAL_USART2=y
+CONFIG_SERIAL_BAUD=230400
