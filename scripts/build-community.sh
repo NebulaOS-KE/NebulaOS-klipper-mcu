@@ -14,6 +14,10 @@
 # bootloader offset is the one setting that can brick a board.
 #
 # Usage: scripts/build-community.sh [out_dir]      (default: artifacts/community)
+#   KLIPPER_SHA=<40-hex>  build from this official Klipper commit instead of
+#                         upstream.lock's - the NebulaOS release build passes
+#                         the firmware manifest's KLIPPER_PIN, so a release's
+#                         community firmwares always match the Klipper it runs.
 # Needs arm-none-eabi-gcc on PATH (scripts/install-toolchain.sh) and python3.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -21,8 +25,14 @@ ROOT=$(pwd)
 OUT=$(mkdir -p "${1:-artifacts/community}" && cd "${1:-artifacts/community}" && pwd)
 SRC="$ROOT/build/klipper-community"
 
-KLIPPER_SHA=$(grep '^KLIPPER_SHA=' upstream.lock | cut -d= -f2-)
 ./scripts/fetch-upstream.sh "$SRC"
+if [ -n "${KLIPPER_SHA:-}" ]; then
+    echo "$KLIPPER_SHA" | grep -Eqx '[0-9a-f]{40}' || { echo "FAIL: KLIPPER_SHA must be a full 40-hex commit"; exit 1; }
+    git -C "$SRC" checkout --quiet "$KLIPPER_SHA"
+fi
+KLIPPER_SHA=$(git -C "$SRC" rev-parse HEAD)
+[ -z "$(git -C "$SRC" status --porcelain)" ] || { echo "FAIL: Klipper checkout not clean"; exit 1; }
+echo "Klipper for the community firmwares: $KLIPPER_SHA"
 command -v arm-none-eabi-gcc >/dev/null || { echo "FAIL: arm-none-eabi-gcc not on PATH"; exit 1; }
 GCC_VERSION=$(arm-none-eabi-gcc --version | head -1)
 MCU_REPO_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo unknown)
