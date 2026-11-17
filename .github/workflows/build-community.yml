@@ -1,0 +1,56 @@
+name: build-community
+
+# Community mainboard firmwares (community/<board>/<chip>.defconfig), built
+# from the official Klipper pinned in upstream.lock with the pinned toolchain
+# and Python. NOT SUPPORTED by NebulaOS - built so users can try them easily.
+# The KE firmware is build-mcu.yml (scripts/ci.sh), unchanged.
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+  pull_request:
+    paths:
+      - 'community/**'
+      - 'scripts/build-community.sh'
+      - 'scripts/fetch-upstream.sh'
+      - 'scripts/install-toolchain.sh'
+      - 'upstream.lock'
+      - '.github/workflows/build-community.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out NebulaOS-klipper-mcu
+        uses: actions/checkout@v4
+
+      # Same exact Python as build-mcu.yml: the firmware embeds zlib output.
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.14'
+
+      - name: Install pinned Arm GNU Toolchain
+        run: |
+          TOOLCHAIN_BIN=$(./scripts/install-toolchain.sh "$RUNNER_TEMP/arm-gnu-toolchain")
+          echo "$TOOLCHAIN_BIN" >> "$GITHUB_PATH"
+
+      - name: Build every community recipe (twice each, byte-identical)
+        run: ./scripts/build-community.sh artifacts/community
+
+      - name: Summary
+        run: |
+          {
+            echo "### Community firmwares (not supported by NebulaOS)"
+            echo '```'
+            cat artifacts/community/*/*/SHA256SUMS
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: nebulaos-community-firmware-${{ github.sha }}
+          path: artifacts/community/
+          if-no-files-found: error
